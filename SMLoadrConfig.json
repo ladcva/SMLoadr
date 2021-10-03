@@ -1,0 +1,9 @@
+{
+    "naming": {
+        "path": "DOWNLOADS/%artist%/%albumName%",
+        "discPath": "%path%/Disc %disc%",
+        "albumName": "%album% (%type%)",
+        "fileName": "%number% %title%"
+    },
+    "arl": "ffe21188c75e10d18ec1dbe07572608be0bd886f4952a6a451e7bee39eeefec08721306da8c9d90e659675fdb56b39013ba6d74034273ecac947a68eeddbc5b5ddcfd7c33b9e80722408320b70ef838336b6c9fc057fc162b9c8727654475031"
+}
