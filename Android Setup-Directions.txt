@@ -1,0 +1,34 @@
+How to use (Android): automatic method  --Using mrmazak miroor on github. NOT OFFICIAL, NOT NEWEST
+1. Install Termux
+In order to run SMLoadr on Android you have to install Termux.
+
+Play Store
+APK Mirror
+2. Install dependencies
+Run Termux and enter these lines in the same order (if it asks you if you want to continue, enter Y):
+
+pkg update
+pkg upgrade
+pkg install curl
+3. Download the install script
+After installing all the dependencies, download the install script, make it executable and start it Follow the instructions on Screen.
+
+curl https://raw.githubusercontent.com/mrmazakblu/SMLoader/master/Helpme-mirror > SMLoadr.sh
+# THIS IS OFICIAL SCRIPT FILE  curl https://del.dog/raw/helpme > SMLoadr.sh
+chmod +x SMLoadr.sh
+./SMLoadr.sh
+4. Start SMLoadr from Termux
+Whenever you want to start SMLoadr just enter ./SMLoadr.sh into Termux.
+
+If you get error about missing downloadLinks.txt, enter ./SMLoadr.sh -f symlink
+
+5. CLI parameters for the Automatic Version (optional)
+If you want to change the downloads folder, use the -c argument, after that enter full path
+
+./SMLoadr.sh -c
+To pass CLI parameters use the -o argument and enter you parameters '
+
+./SMLoadr.sh -o '-q MP3_128 -d single DeezerURL'
+To reinstall: ./SMLoadr.sh -f fix
+
+To uninstall completely: ./SMLoadr.sh -f full

@@ -1,0 +1,142 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+usage="${0##*/} [-h] [-f full|fix|symlink] [-o options]
+where:
+ -h          show this help text
+ -f
+    full     completely remove SMLoadr and this script
+    symlink  fix symlinks in case they're broken
+    fix      reinstall SMLoadr
+ -o          options to be passed on to SMLoadr
+             check SMLoadr documentations for help
+             please enclose options in quotes \" \"
+"
+updt_dpdc()
+{
+	apt-get install -y nodejs > /dev/null
+	apt-get install -y git > /dev/null
+	apt-get install -y curl > /dev/null
+}
+ptch_farm()
+{
+	test=$(grep "require('os').cpus().length" /data/data/com.termux/files/usr/lib/node_modules/npm/node_modules/worker-farm/lib/farm.js 2> /dev/null )
+	if ! [ "$test" = "" ]; then
+		cpu=$(cat /sys/devices/system/cpu/kernel_max)
+		let cpu=cpu+1
+		sed -i "s|require('os').cpus().length|$cpu|g" /data/data/com.termux/files/usr/lib/node_modules/npm/node_modules/worker-farm/lib/farm.js
+	fi
+}
+set_var()
+{
+	latest=$(curl http://pastebin.com/raw/mGMEFicV 2> /dev/null); [[ "$latest" =~ [0-9]\.[0-9]\.[0-9] ]] || latest=$(curl https://raw.githubusercontent.com/mrmazakblu/SMLoader/master/VERSION.md 2> /dev/null)
+	current=$(cat smloadr/VERSION.md 2> /dev/null)
+	cdir=$PWD
+}
+get_dldir()
+{
+	echo "Input download location (press enter for default: /Internal Storage/SMLoadr)"
+	read -p "/Internal Storage/" dldir
+	if [ "$dldir" = "" ]; then
+		dldir="SMLoadr"
+	fi
+}
+symlink()
+{
+	termux-setup-storage
+	(cd .smloadrcfg && {
+	if [ ! -d ~/storage/shared/$dldir ]; then
+		mkdir -p ~/storage/shared/$dldir
+	fi
+	[ -e DOWNLOADS ] && rm -f DOWNLOADS
+	ln -s ~/storage/shared/$dldir DOWNLOADS
+	if [ ! -d ~/storage/shared/$dldir/PLAYLISTS ]; then
+		mkdir ~/storage/shared/$dldir/PLAYLISTS
+	fi
+	[ -e PLAYLISTS ] && rm -f PLAYLISTS
+	ln -s ~/storage/shared/$dldir/PLAYLISTS PLAYLISTS
+	if [ ! -f ~/storage/shared/$dldir/downloadLinks.txt ]; then
+		touch ~/storage/shared/$dldir/downloadLinks.txt
+	fi
+	[ -e downloadLinks.txt ] && rm -f downloadLinks.txt
+	ln -s ~/storage/shared/$dldir/downloadLinks.txt downloadLinks.txt
+	} )
+}
+instal()
+{
+	[ -d smloadr ] && rm -rf smloadr
+	[ -d .smloadrcfg ] || mkdir .smloadrcfg
+	git clone https://github.com/mrmazakblu/SMLoader.git smloadr 2> /dev/null
+	cd smloadr
+	npm install > /dev/null 2> /dev/null || { echo > VERSION.md; return 1; }
+	sed -i 's/linux/android/' node_modules/openurl/openurl.js
+	cd ..
+}
+update()
+{
+	dldir=$(readlink -f smloadr/DOWNLOADS)
+	dldir=$(sed 's|/s.*/0/||' <<< $dldir)
+	updt_dpdc
+	ptch_farm
+	(cd smloadr; git pull)
+}
+setup()
+{
+	updt_dpdc
+#	getnode
+	ptch_farm
+	instal || { echo "installation failed"; exit 1; }
+	get_dldir
+	symlink
+}
+run()
+{
+	(cd .smloadrcfg && node $cdir/smloadr/SMLoadr.js $options)
+}
+cleanup()
+{
+	[[ "$1" = "fix" ]] && rm -rf smloadr/ && rm -rf .smloadrcfg && echo "Reinstalling SMLoadr..." && setup && echo "Done!" && exit
+	[[ "$1" = "symlink" ]] && rm -f .smloadrcfg/DOWNLOADS .smloadrcfg/PLAYLISTS .smloadrcfg/downloadLinks.txt && get_dldir && symlink && exit
+	[[ "$1" = "full" ]] && rm -rf smloadr/ && rm -rf .smloadrcfg && rm -f $0 && exit
+	[[ "$1" = "update" ]] && echo "Updating..." && update && echo "Done!" && run && exit
+}
+selfupdate()
+{
+	curl https://raw.githubusercontent.com/mrmazakblu/SMLoader/master/Helpme-mirror > ./.tmpscript 2> /dev/null
+	[[ $(cat ./.tmpscript) = "" ]] && return 1
+	if ! cmp -s ./.tmpscript $0; then
+		echo "Script updated! Run again"
+		echo "$usage"
+		cat ./.tmpscript > $0
+		rm -f ./.tmpscript
+		exit
+	fi
+	rm -f ./.tmpscript
+}
+#getnode()
+#{
+#	[[ "$(dpkg --print-architecture)" = "arm" ]] && aria2c $node_arm > /dev/null 2>&1 && dpkg -i nodejs-lts_8.12.0_arm.deb > /dev/null 2>&1 && rm -f nodejs-lts_8.12.0_arm.deb && return 0
+#	[[ "$(dpkg --print-architecture)" = "aarch64" ]] && aria2c $node_aarch64 > /dev/null 2>&1 && dpkg -i nodejs-lts_8.12.0_aarch64.deb > /dev/null 2>&1 && rm -f nodejs-lts_8.12.0_aarch64.deb && return 0
+#}
+while getopts "co:f:h" s; do
+	case "${s}" in
+		c)
+			chgdldir="1" ;;
+		o)
+			options="$OPTARG" ;;
+		f)
+			case $OPTARG in
+				full|symlink|fix|update)
+					clnup="$OPTARG" ;;
+				*)
+					echo "unknown argument \"$OPTARG\" " && echo "$usage" && exit ;;
+			esac ;;
+		*)	echo "$usage" && exit ;;
+	esac
+done
+set_var
+selfupdate
+[[ "$clnup" = "" ]] || cleanup "$clnup"
+[[ "$current" = "" ]] && echo "SMLoadr not found! Setting up..." && setup && echo "Done!" && run && exit
+[[ ! "$current" = "$latest" ]] && echo "Update avaiable! Updating..." && update && echo "Done!" && run && exit
+[[ "$current" = "$latest" ]] && [[ "$chgdldir" = "1" ]] && get_dldir && symlink && exit
+[[ "$current" = "$latest" ]] && run && exit
